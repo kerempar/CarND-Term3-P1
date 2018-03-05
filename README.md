@@ -1,5 +1,11 @@
 # CarND-Path-Planning-Project
 Self-Driving Car Engineer Nanodegree Program
+
+## Kerem Par
+<kerempar@gmail.com>
+
+
+---
    
 ### Simulator.
 You can download the Term3 Simulator which contains the Path Planning Project from the [releases tab (https://github.com/udacity/self-driving-car-sim/releases).
@@ -87,54 +93,61 @@ A really helpful resource for doing this project and creating smooth trajectorie
     git checkout e94b6e1
     ```
 
-## Editor Settings
+---
 
-We've purposefully kept editor configuration files out of this repo in order to
-keep it as simple and environment agnostic as possible. However, we recommend
-using the following settings:
+## Compilation
 
-* indent using spaces
-* set tab width to 2 spaces (keeps the matrices in source code aligned)
+The code compiles correctly. Code compiles without errors with `cmake` and `make`.
 
-## Code Style
+---
 
-Please (do your best to) stick to [Google's C++ style guide](https://google.github.io/styleguide/cppguide.html).
+## Valid Trajectories
 
-## Project Instructions and Rubric
+It is observed that the following conditions are met during the tests on the simulator environment:
 
-Note: regardless of the changes you make, your project must be buildable using
-cmake and make!
+The car is able to drive at least 4.32 miles without incidents such as exceeding acceleration/jerk/speed, collision, and driving outside of the lanes. 
 
+The car drives according to the speed limit. The car doesn't drive faster than the speed limit. Also the car isn't driving much slower than speed limit unless obstructed by traffic.
 
-## Call for IDE Profiles Pull Requests
+Max Acceleration and Jerk are not Exceeded. The car does not exceed a total acceleration of 10 m/s^2 and a jerk of 10 m/s^3.
 
-Help your fellow students!
+Car does not have collisions. The car does not come into contact with any of the other cars on the road.
 
-We decided to create Makefiles with cmake to keep this project as platform
-agnostic as possible. Similarly, we omitted IDE profiles in order to ensure
-that students don't feel pressured to use one IDE or another.
+The car stays in its lane, except for the time between changing lanes.  The car doesn't spend more than a 3 second length outside the lane lines during changing lanes, and every other time the car stays inside one of the 3 lanes on the right hand side of the road.
 
-However! I'd love to help people get up and running with their IDEs of choice.
-If you've created a profile for an IDE that you think other students would
-appreciate, we'd love to have you add the requisite profile files and
-instructions to ide_profiles/. For example if you wanted to add a VS Code
-profile, you'd add:
+The car is able to change lanes. The car is able to smoothly change lanes when it makes sense to do so, such as when behind a slower moving car and an adjacent lane is clear of other traffic.
 
-* /ide_profiles/vscode/.vscode
-* /ide_profiles/vscode/README.md
+---
 
-The README should explain what the profile does, how to take advantage of it,
-and how to install it.
+## Implementation
 
-Frankly, I've never been involved in a project with multiple IDE profiles
-before. I believe the best way to handle this would be to keep them out of the
-repo root to avoid clutter. My expectation is that most profiles will include
-instructions to copy files to a new location to get picked up by the IDE, but
-that's just a guess.
+The code model for generating paths is described in detail.
 
-One last note here: regardless of the IDE used, every submitted project must
-still be compilable with cmake and make./
+A path planner that performs optimized lane changing was created. This means that the car only changes into a lane that improves its forward progress.
 
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
+As the starting point the code and instructions given in `Project Walkthrough and Q&A` section of the project descriptions were adapted. 
 
+The reference velocity is initially set to 0 and increased gradually (.224 mph per time interval) to prevent exceeding the max accelaration limit to a maximum of 49.5 mph to prevent exceeding the max speed limit.
+
+For each time step, it is checked if there is a car in front of the ego vehicle at the same lane and based on the velocities, if there is a safe gap (30m) between the vehicles. If we will keep the lane, then we reduce the reference velcoity gradually (.224 mph per time interval).   
+
+Then lane change logic was improved to be able to propose lane changes from any lane to any lane and to enable safe lane changes. If the car is too close to a slower car in front of it (less than 30m), a lane change is proposed based on the following table:   
+
+| Current Lane |  Proposed New Lane  | 
+| ----- | ------- |
+|  0    |  1 (right) | 
+|  1    |  0 (left)  | 
+|  1    |  2 (right)  - if changing left is not safe| 
+|  2  | 1 (left) | 
+
+Then, the proposed lane change is checked if it is safe or not by a method named `isLaneChangeSafe`. The method iterates over all the cars in the sensor fusion data. It first checks if a car is going on the same lane as the proposed new lane, Then, based on its velocity, it is checked if there would be a safe gap (30m) between the car and the ego vehicle (either in front of or behind the ego vehicle) when the lane change occures. If this is the case, the proposed lane change is executed by setting the destination waypoint of the path to be on the new lane.  
+
+On the other hand, the trajectory generation is performed as follows:
+
+We define a path made up of (x,y) points that the car will visit sequentially every .02 seconds. First, we create a list of widely spaced (x,y) waypoints, evenly spaced at 30m. In Frenet we add three evenly 30m spaced points (at 30m, 60m and 90m) ahead of the starting reference. Then we create a spline interpolating these waypoints. Then we define the actual (x,y) points we will use for the planner by breaking up spline points so that we travel at our desired reference velocity. We always output 50 points.
+
+The following is a sample image captured from the simulator:
+
+![Screenshot](./images/screenshot1.png)
+
+In addition, a video was also included covering a 5 miles travel of the car showing many lane change manouvers. 
